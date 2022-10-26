@@ -1,6 +1,6 @@
 "use strict";
 
-import { app, protocol, BrowserWindow } from "electron";
+import { app, protocol, BrowserWindow, ipcMain } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -65,9 +65,10 @@ app.on("ready", async () => {
   const window = await createWindow();
 
   io.on("connection", (socket) => {
-    console.log(socket.client);
-    window.webContents.send("new-client", socket.client);
-    
+    socket.on("new-client", (data) => {
+      socket.data = { ...data, socket_id: socket.id };
+      window.webContents.send("new-client", socket.data);
+    });
   });
 });
 
@@ -103,14 +104,15 @@ const server = store.get("server");
 // SOCKET SERVER
 const { Server } = require("socket.io");
 
-const io = new Server();
-
-io.use(async (socket, next) => {
-  try {
-    socket.client = socket.handshake.query.client;
-  } catch (e) {
-    next(new Error("unknown client"));
-  }
+const io = new Server({
+  cors: {
+    origin: "*",
+  },
 });
 
 io.listen(server.port);
+
+ipcMain.handle("clients", async (event, data) => {
+  const connectedSockets = await io.fetchSockets();
+  return connectedSockets.map((s) => s.data);
+});
