@@ -13,7 +13,7 @@ protocol.registerSchemesAsPrivileged([
 async function createWindow() {
   // Create the browser window.
   const win = new BrowserWindow({
-    width: 800,
+    width: 1200,
     height: 600,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone
@@ -22,7 +22,7 @@ async function createWindow() {
       contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
     },
   });
-
+  win.maximize();
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
     await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
@@ -32,6 +32,7 @@ async function createWindow() {
     // Load the index.html when not in development
     win.loadURL("app://./index.html");
   }
+
   return win;
 }
 
@@ -68,6 +69,16 @@ app.on("ready", async () => {
     socket.on("new-client", (data) => {
       socket.data = { ...data, socket_id: socket.id };
       window.webContents.send("new-client", socket.data);
+    });
+
+    socket.on("disconnect", () => {
+      window.webContents.send("remove-client", socket.data);
+    });
+
+    socket.emit("get-status");
+
+    socket.on("status", (status) => {
+      window.webContents.send();
     });
   });
 });
@@ -115,4 +126,16 @@ io.listen(server.port);
 ipcMain.handle("clients", async (event, data) => {
   const connectedSockets = await io.fetchSockets();
   return connectedSockets.map((s) => s.data);
+});
+
+ipcMain.on("open-client-window", (event, data) => {
+  io.to(data.socket_id).emit("open-window");
+});
+
+ipcMain.on("close-client-window", (event, data) => {
+  io.to(data.socket_id).emit("close-window");
+});
+
+ipcMain.on("power-off", (event, data) => {
+  io.to(data.socket_id).emit("power-off");
 });
