@@ -1,5 +1,5 @@
 {
-  "name": "admisiones_server",
+  "name": "admisiones_manager",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -19,10 +19,10 @@
     "buefy": "^0.9.0",
     "core-js": "^3.8.3",
     "electron-store": "^8.1.0",
-    "register-service-worker": "^1.7.2",
-    "socket.io": "^4.5.3",
+    "socket.io-client": "^4.5.3",
     "vue": "^2.6.14",
-    "vue-router": "^3.5.1"
+    "vue-router": "^3.5.1",
+    "vue-socket.io": "^3.0.10"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",

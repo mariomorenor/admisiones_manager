@@ -1,10 +1,11 @@
 <template>
   <div class="home">
     <b-tabs>
-      <b-tab-item v-for="laboratory in labs" :key="laboratory.id" position="is-centered" :label="laboratory.name">
+      <b-tab-item v-for="laboratory in laboratories" :key="laboratory.id" position="is-centered"
+        :label="laboratory.name">
         <div class="columns">
-          <div class="column is-4" v-for="client in clients" :key="client.id">
-            <div class="card" v-if="client.lab == laboratory.num">
+          <div class="column is-4" v-for="client in laboratory.clients" :key="client.id">
+            <div class="card">
               <div class="card-content">
                 <b-field label="Nombre" label-position="on-border">
                   <b-input readonly v-model="client.name"></b-input>
@@ -43,68 +44,51 @@
 </template>
 
 <script>
-import { ipcRenderer } from 'electron';
 
 export default {
   name: 'HomeView',
   data() {
     return {
-      clients: [],
-      labs: []
+      laboratories: []
     }
   },
   beforeMount() {
     for (let index = 1; index <= 7; index++) {
-      this.labs.push({
+      this.laboratories.push({
         name: "Sála de Cómputo " + index,
-        num: index
+        num: index,
+        clients: []
       })
     }
-
-    ipcRenderer.invoke("clients").then(clients => {
-      this.clients = clients
-    })
-    ipcRenderer.on("new-client", (event, data) => {
-
-      if (this.clients.length == 0) {
-        this.clients.push(data);
-        return
+  },
+  mounted() {
+    this.$socket.emit("new-manager", null, (sockets) => {
+      for (let index = 0; index < 7; index++) {
+        this.laboratories[index].clients = sockets.filter(socket => socket.lab == (index + 1))
       }
-
-      if (this.clients.find(c => c.name != data.name)) {
-        this.clients.push(data)
-      }
-    });
-
-    ipcRenderer.on("remove-client", (event, data) => {
-      this.clients = this.clients.filter(c => c.socket_id != data.socket_id)
     })
   },
   methods: {
     open(client) {
       client.status = true
-      ipcRenderer.send("open-client-window", client)
+      this.$socket.emit("open-window",client)
     },
     close(client) {
       client.status = false
-      ipcRenderer.send("close-client-window", client)
+      this.$socket.emit("close-window",client)
     },
     powerOff(client) {
-      ipcRenderer.send("power-off", client)
+      console.log(client);
     }
   },
-  computed: {
-    clients_lab_1() {
-      return this.clients.filter(c => c.lab == 1)
+  sockets: {
+    newClient(socket) {
+      const laboratory = this.laboratories.find(lab => lab.num == socket.lab)
+      laboratory.clients.push(socket)
     },
-    clients_lab_2() {
-      return this.clients.filter(c => c.lab == 2)
-    },
-    clients_lab_7() {
-      return this.clients.filter(c => c.lab == 7)
-    },
-    clients_other() {
-      return this.clients.filter(c => c.lab == null)
+    removeClient(socket) {
+      const laboratory = this.laboratories.find(lab => lab.num == socket.lab)
+      laboratory.clients = laboratory.clients.filter(client => client.name != socket.name)
     }
   }
 }
